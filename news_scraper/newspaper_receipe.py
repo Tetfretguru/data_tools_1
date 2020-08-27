@@ -1,16 +1,50 @@
 import argparse
 import hashlib
+
+import nltk
+from nltk.corpus import stopwords
+
 import logging
 logging.basicConfig(level=logging.INFO)
 
-
 from urllib.parse import urlparse
-
 import pandas as pd
 import re
 
 logger = logging.getLogger(__name__)
 
+def _save_data(df, filename):
+    clean_filename = 'clean_{}'.format(filename)
+    logger.info('Saving data at location: {}'.format(clean_filename))
+    df.to_csv(clean_filename)
+
+def _drop_rows_with_missing_values(df):
+    logger.info('Dropping rows with missing data')
+    return df.dropna()
+
+def _remove_duplicated_entries(df, column_name):
+    logger.info('Removing duplicated entries')
+    df.drop_duplicates(subset=['title'], keep='first', inplace=True)
+
+    return df
+
+# Data enrichment with nltk module
+def _tokenize_main_headers(df):
+    stop_words = set(stopwords.words('spanish'))
+
+    def __tokenize_column(df, column_name):
+        return (df
+                    .apply(lambda row: nltk.word_tokenize(row[column_name]), axis=1)
+                    .apply(lambda tokens: list(filter(lambda token: token.isalpha(), tokens)))
+                    .apply(lambda tokens: list(map(lambda token: token.lower(), tokens)))
+                    .apply(lambda word_list: list(filter(lambda word: word not in stop_words, word_list)))
+                    .apply(lambda ok_words_list: len(ok_words_list))
+                )
+
+    df['title_tokens'] = __tokenize_column(df, 'title')
+    df['body_tokens'] = __tokenize_column(df, 'body')
+
+    return df 
 def _body_cleanup(df):
 	logger.info('Removing new lines from body')
 	
@@ -85,6 +119,11 @@ def main(filename):
     df = _fill_missing_titles(df)
     df = _gen_uids_for_rows(df)
     df = _body_cleanup(df)
+    df = _tokenize_main_headers(df)
+    df = _remove_duplicated_entries(df, 'title')
+    df = _drop_rows_with_missing_values(df)
+    _save_data(df, filename)
+    
     return df
 
 if __name__ == '__main__':
