@@ -11,3 +11,9 @@ news_sites:
       homepage_article_links: '.articulo-titulo a'
       article_body: '.articulo-cuerpo'
       article_title: '.articulo-titulo'
+  ladiaria:
+    url: https://ladiaria.com.uy/
+    queries: 
+      homepage_article_links: '.frontpage-section a'
+      article_body: '.ld-card__body a'
+      article_title: '.main h3 a'
